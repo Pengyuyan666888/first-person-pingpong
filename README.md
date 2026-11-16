@@ -122,7 +122,8 @@ pingpong/
 │     ├─ spinPhysics.js       # 3D 旋转、阻力、马格努斯力、轨迹模拟
 │     ├─ lab.js               # 实验室场景、轨迹、交互
 │     └─ lab.css              # 实验室界面样式
-├─ vite.config.js             # Vite 多页面构建配置\n├─ serve.mjs                  # 零依赖本地静态服务器
+├─ vite.config.js             # Vite 多页面构建配置
+├─ serve.mjs                  # 零依赖本地静态服务器
 └─ package.json
 ```
 
