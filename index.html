@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05080f" />
+    <title>极速乒乓 · 第一人称 3D 乒乓球</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307101e'/%3E%3Ccircle cx='27' cy='27' r='15' fill='%23ff8a3d'/%3E%3Ccircle cx='42' cy='42' r='7' fill='%2361e7ff'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/node_modules/three/build/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="game-canvas"></canvas>
+    <div id="vignette"></div>
+
+    <div id="hud" class="hidden">
+      <div class="scoreboard">
+        <div class="score-side player" id="score-side-player">
+          <span class="score-name">你</span>
+          <span class="score-number" id="score-player">0</span>
+          <span class="serve-dot" title="发球方"></span>
+        </div>
+        <div class="score-divider">
+          <span class="score-colon">:</span>
+          <span class="difficulty-badge" id="difficulty-badge">业余</span>
+        </div>
+        <div class="score-side ai" id="score-side-ai">
+          <span class="serve-dot" title="发球方"></span>
+          <span class="score-number" id="score-ai">0</span>
+          <span class="score-name">机器</span>
+        </div>
+      </div>
+
+      <div class="hud-actions">
+        <button class="icon-btn" id="mute-btn" type="button" aria-label="声音开关" title="声音开关">
+          <span id="mute-icon">♪</span>
+        </button>
+        <button class="icon-btn" id="pause-btn" type="button" aria-label="暂停" title="暂停">
+          <span class="pause-icon"></span>
+        </button>
+      </div>
+
+      <div class="rally-chip" id="rally-chip">回合 <b>0</b></div>
+
+      <div class="hint-bar" id="hint-bar">
+        <span><b>移动鼠标</b> 控拍</span>
+        <i></i>
+        <span><b>按住左键</b> 引拍</span>
+        <i></i>
+        <span><b>松开</b> 击球</span>
+      </div>
+
+      <div class="serve-prompt hidden" id="serve-prompt">
+        <div class="serve-prompt-title">你的发球</div>
+        <div class="serve-prompt-sub">点击抛球，再点击击球</div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <section class="screen start-screen" id="start-screen">
+      <div class="ambient-orb orb-a"></div>
+      <div class="ambient-orb orb-b"></div>
+      <div class="start-layout">
+        <div class="start-copy">
+          <div class="eyebrow"><span class="live-dot"></span> 第一人称 · 3D · 只用鼠标</div>
+          <h1>极速<span>乒乓</span></h1>
+          <p class="tagline">站在球台前，用鼠标挥出你的第一拍。</p>
+
+          <div class="control-strip">
+            <div class="control-item">
+              <span class="control-icon mouse-icon"></span>
+              <div><b>移动鼠标</b><small>球拍跟随移动</small></div>
+            </div>
+            <div class="control-item">
+              <span class="control-icon click-icon"></span>
+              <div><b>按住左键</b><small>引拍蓄力，松开击球</small></div>
+            </div>
+            <div class="control-item">
+              <span class="control-icon toss-icon"></span>
+              <div><b>发球</b><small>点击抛球，再点击击球</small></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="start-panel">
+          <div class="panel-kicker">选择对手强度</div>
+          <div class="difficulty-list" id="difficulty-list">
+            <button class="difficulty-card" data-difficulty="easy" type="button">
+              <span class="difficulty-mark">01</span>
+              <span class="difficulty-copy"><b>新手</b><small>球速慢，接球辅助强</small></span>
+              <span class="difficulty-tag">轻松</span>
+            </button>
+            <button class="difficulty-card active" data-difficulty="normal" type="button">
+              <span class="difficulty-mark">02</span>
+              <span class="difficulty-copy"><b>业余</b><small>有来有回，偶尔失误</small></span>
+              <span class="difficulty-tag">推荐</span>
+            </button>
+            <button class="difficulty-card" data-difficulty="hard" type="button">
+              <span class="difficulty-mark">03</span>
+              <span class="difficulty-copy"><b>高手</b><small>预判准，落点刁钻</small></span>
+              <span class="difficulty-tag">挑战</span>
+            </button>
+          </div>
+
+          <button class="primary-btn" id="start-btn" type="button">
+            <span>开始比赛</span>
+            <span class="btn-arrow">→</span>
+          </button>
+          <button class="text-btn" id="how-to-btn" type="button">操作说明</button>
+
+          <div class="panel-foot">
+            <span>7 分制 · 领先 2 分获胜</span>
+            <button class="sound-toggle" id="sound-toggle" type="button" aria-pressed="true">
+              <span class="sound-bars"><i></i><i></i><i></i></span>
+              <span id="sound-label">声音开启</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="start-footer">鼠标就是你的球拍 · 建议全屏游玩</div>
+    </section>
+
+    <section class="screen tutorial-screen hidden" id="tutorial-screen">
+      <div class="tutorial-panel">
+        <div class="panel-kicker">30 秒上手</div>
+        <h2>只用鼠标，怎么打？</h2>
+        <div class="tutorial-grid">
+          <article class="tutorial-card">
+            <span class="step-no">1</span>
+            <div class="tutorial-visual visual-move"><span class="mini-paddle"></span><span class="move-path"></span></div>
+            <h3>移动鼠标</h3>
+            <p>球拍会在身前跟着鼠标移动。把拍面对准来球，左右、上下都要照顾到。</p>
+          </article>
+          <article class="tutorial-card">
+            <span class="step-no">2</span>
+            <div class="tutorial-visual visual-swing"><span class="mini-paddle"></span><span class="swing-arc"></span></div>
+            <h3>按住，再松开</h3>
+            <p>按住左键引拍蓄力，松开完成挥拍。击球越准、蓄力越足，球越快。</p>
+          </article>
+          <article class="tutorial-card">
+            <span class="step-no">3</span>
+            <div class="tutorial-visual visual-serve"><span class="mini-ball"></span><span class="toss-line"></span></div>
+            <h3>两次点击发球</h3>
+            <p>第一次点击抛球，第二次点击击球。发球时鼠标位置决定大致落点。</p>
+          </article>
+        </div>
+        <div class="tutorial-tip">
+          <span class="tip-mark">TIP</span>
+          <p>来球接近时，球台会出现落点圈；球拍有效区也比看起来略大。先求接住，再求发力。</p>
+        </div>
+        <button class="primary-btn" id="tutorial-start" type="button">
+          <span>开始对打</span><span class="btn-arrow">→</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="screen pause-screen hidden" id="pause-screen">
+      <div class="modal-panel pause-panel">
+        <div class="panel-kicker">比赛暂停</div>
+        <h2>喘口气</h2>
+        <p class="modal-copy">球不会跑掉。继续时，鼠标立刻回到你的球拍上。</p>
+        <div class="modal-actions">
+          <button class="primary-btn" id="resume-btn" type="button"><span>继续比赛</span><span class="btn-arrow">→</span></button>
+          <button class="secondary-btn" id="restart-btn" type="button">重新开始</button>
+          <button class="text-btn" id="quit-btn" type="button">返回主菜单</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen result-screen hidden" id="result-screen">
+      <div class="modal-panel result-panel">
+        <div class="result-glow"></div>
+        <div class="panel-kicker" id="result-kicker">比赛结束</div>
+        <h2 id="result-title">胜利</h2>
+        <div class="result-score">
+          <span id="result-player">0</span>
+          <i>:</i>
+          <span id="result-ai">0</span>
+        </div>
+        <p class="result-sub" id="result-sub">你赢下了这场比赛。</p>
+        <div class="result-stats">
+          <div><small>最长回合</small><b id="stat-rally">0 拍</b></div>
+          <div><small>制胜分</small><b id="stat-winners">0</b></div>
+          <div><small>难度</small><b id="stat-difficulty">业余</b></div>
+        </div>
+        <div class="modal-actions horizontal">
+          <button class="primary-btn" id="rematch-btn" type="button"><span>再来一局</span><span class="btn-arrow">→</span></button>
+          <button class="secondary-btn" id="menu-btn" type="button">返回主菜单</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="loading-screen">
+      <div class="loading-mark"><span></span><span></span><span></span></div>
+      <p>正在擦亮球台…</p>
+    </div>
+
+    <div id="debug-panel" class="hidden"></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
