@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05080f" />
+    <title>旋转轨迹实验室 · 极速乒乓</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307101e'/%3E%3Ccircle cx='27' cy='27' r='15' fill='%23ff8a3d'/%3E%3Ccircle cx='42' cy='42' r='7' fill='%2361e7ff'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/src/lab/lab.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/node_modules/three/build/three.module.js",
+          "three/addons/": "/node_modules/three/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="lab-canvas"></canvas>
+    <div id="lab-vignette"></div>
+
+    <header class="lab-header">
+      <a class="lab-back" href="/">← 返回球台</a>
+      <div class="lab-brand">
+        <span class="lab-kicker">SPIN LAB / 01</span>
+        <h1>旋转轨迹实验室</h1>
+        <p>同一拍、同一初速，只改变旋转。观察马格努斯力如何改写弹道。</p>
+      </div>
+    </header>
+
+    <aside class="lab-panel">
+      <div class="panel-head">
+        <span class="panel-kicker">选择旋转</span>
+        <span class="panel-note">点击发球</span>
+      </div>
+
+      <div class="spin-grid" id="spin-grid">
+        <button class="spin-card" data-spin="topspin" type="button">
+          <span class="spin-dot" style="--dot:#ff8a3d"></span>
+          <span class="spin-copy"><b>上旋</b><small>下扎 · 前冲</small></span>
+          <span class="spin-short">TOP</span>
+        </button>
+        <button class="spin-card" data-spin="backspin" type="button">
+          <span class="spin-dot" style="--dot:#61e7ff"></span>
+          <span class="spin-copy"><b>下旋</b><small>上飘 · 减速</small></span>
+          <span class="spin-short">BACK</span>
+        </button>
+        <button class="spin-card" data-spin="sidespin" type="button">
+          <span class="spin-dot" style="--dot:#ff5cd6"></span>
+          <span class="spin-copy"><b>侧旋</b><small>横拐 · 侧跳</small></span>
+          <span class="spin-short">SIDE</span>
+        </button>
+        <button class="spin-card" data-spin="sidetop" type="button">
+          <span class="spin-dot" style="--dot:#b6ff5c"></span>
+          <span class="spin-copy"><b>侧上旋</b><small>横拐 + 下扎</small></span>
+          <span class="spin-short">SIDE+</span>
+        </button>
+      </div>
+
+      <div class="lab-actions">
+        <button class="launch-btn" id="launch-btn" type="button">
+          <span>发球</span><span class="launch-arrow">→</span>
+        </button>
+        <button class="ghost-btn" id="compare-btn" type="button">四种一起对比</button>
+      </div>
+
+      <div class="slider-group">
+        <label class="slider-row" for="spin-strength">
+          <span>旋转强度</span>
+          <b id="spin-strength-value">90%</b>
+        </label>
+        <input id="spin-strength" type="range" min="0" max="1.2" step="0.01" value="0.9" />
+        <div class="slider-scale"><span>无旋</span><span>职业强旋</span></div>
+      </div>
+
+      <div class="slider-group">
+        <label class="slider-row" for="play-speed">
+          <span>播放速度</span>
+          <b id="play-speed-value">0.55×</b>
+        </label>
+        <input id="play-speed" type="range" min="0.2" max="1.2" step="0.05" value="0.55" />
+      </div>
+
+      <div class="toggle-list">
+        <label class="toggle-row">
+          <input id="show-reference" type="checkbox" checked />
+          <span class="toggle-ui"></span>
+          <span>显示无旋参考弹道</span>
+        </label>
+        <label class="toggle-row">
+          <input id="auto-replay" type="checkbox" />
+          <span class="toggle-ui"></span>
+          <span>自动循环播放</span>
+        </label>
+      </div>
+
+      <button class="text-btn" id="clear-btn" type="button">清除轨迹</button>
+    </aside>
+
+    <section class="lab-readout">
+      <div class="readout-head">
+        <span class="panel-kicker" id="readout-kicker">等待发球</span>
+        <span class="readout-badge" id="readout-badge">REFERENCE</span>
+      </div>
+      <p class="readout-desc" id="readout-desc">
+        先打一记无旋球作为基准。之后切换上旋、下旋、侧旋，观察落点如何偏离。
+      </p>
+      <div class="readout-grid">
+        <div><small>旋转量</small><b id="stat-spin">0 rad/s</b></div>
+        <div><small>最高点</small><b id="stat-height">—</b></div>
+        <div><small>落点偏移</small><b id="stat-deviation">—</b></div>
+        <div><small>飞行时间</small><b id="stat-time">—</b></div>
+      </div>
+      <div class="compare-summary hidden" id="compare-summary"></div>
+    </section>
+
+    <div class="lab-legend" id="lab-legend">
+      <span><i style="--dot:#a9bed3"></i>无旋参考</span>
+      <span><i style="--dot:#ff8a3d"></i>上旋</span>
+      <span><i style="--dot:#61e7ff"></i>下旋</span>
+      <span><i style="--dot:#ff5cd6"></i>侧旋</span>
+      <span><i style="--dot:#b6ff5c"></i>侧上旋</span>
+    </div>
+
+    <div class="lab-tip">
+      拖动旋转视角 · 滚轮缩放 · 轨迹为真实空气力模拟，台面反弹为简化模型
+    </div>
+
+    <script type="module" src="/src/lab/lab.js"></script>
+  </body>
+</html>
